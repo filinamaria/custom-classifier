@@ -26,7 +26,10 @@
 		<artifactId>weka-stable</artifactId>
 		<version>3.6.13</version>
 	</dependency>
-    
-    
+	<dependency>
+		<groupId>com.google.guava</groupId>
+		<artifactId>guava</artifactId>
+		<version>14.0</version>
+	</dependency>
   </dependencies>
 </project>
