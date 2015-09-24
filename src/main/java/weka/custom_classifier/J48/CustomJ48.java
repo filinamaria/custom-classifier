@@ -22,7 +22,8 @@ import weka.filters.unsupervised.attribute.Add;
 /**
  * Custom J48
  * Using binary split for numeric attributes handling
- * Using subtree raising for pruning algorithm, no confidence factor needed
+ * Using subtree raising for pruning algorithm, no confidence factor needed.
+ * ^it is based on the idea of rule-based pruning model, trying to remove conjuction
  *
  */
 public class CustomJ48 extends Classifier
