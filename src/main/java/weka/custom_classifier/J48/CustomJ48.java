@@ -8,6 +8,7 @@ import java.util.Enumeration;
 import com.google.common.math.DoubleMath;
 
 import weka.classifiers.Classifier;
+import weka.classifiers.Evaluation;
 import weka.classifiers.trees.J48;
 import weka.core.Attribute;
 import weka.core.Capabilities;
@@ -82,6 +83,9 @@ public class CustomJ48 extends Classifier
 		
 		//post-prune
 		pruneTree(null, null, decisionTree, data);
+		
+		//accuracy
+		System.out.println("Model accuracy = "+accuracyPerformance(data));
 	}
 	
 	/**
@@ -121,9 +125,8 @@ public class CustomJ48 extends Classifier
 				
 				//modify training data to fit the rule
 				Add filter = new Add();
-				System.out.println("flag: " + i);
 				filter.setAttributeIndex("first");
-				filter.setNominalLabels("moreThan"+Integer.toString(middleValue)+", lessEqualThan"+Double.toString(middleValue));
+				filter.setNominalLabels("moreThan"+Integer.toString(middleValue)+", lessEqualThan"+Integer.toString(middleValue));
 				filter.setAttributeName(data.attribute(i).name());
 				filter.setInputFormat(retVal);
 				retVal = Filter.useFilter(retVal, filter);
@@ -275,20 +278,36 @@ public class CustomJ48 extends Classifier
 	 */
 	public void pruneTree (Tree grandparent, Tree parent, Tree child, Instances data) 
 	{
-		if (child.getAttribute() == null) //at leaf
+		boolean found = true;
+		if (parent!=null) //safety measure
 		{
-			subTreeRaising(grandparent, parent, child, data);
-		}
-		else { //not at leaf
-			Tree[] childList = child.getChildren();
-			for (int i=0; i<childList.length; i++)
+			found = false;
+			Tree[] childList = parent.getChildren();
+			for (int i=0; i<childList.length && !found; i++) 
 			{
-				pruneTree(parent, child, childList[i], data);
+				if (child.equals(childList[i]))
+				{
+					found = true;
+				}
 			}
-			
-			if (grandparent!=null) //try subtree raising
+		}
+		if (found) 
+		{
+			if (child.getAttribute() == null) //at leaf
 			{
 				subTreeRaising(grandparent, parent, child, data);
+			}
+			else { //not at leaf
+				Tree[] childList = child.getChildren();
+				for (int i=0; i<childList.length; i++)
+				{
+					pruneTree(parent, child, childList[i], data);
+				}
+				
+				if (grandparent!=null && parent!=null) //try subtree raising
+				{
+					subTreeRaising(grandparent, parent, child, data);
+				}
 			}
 		}
 	}
@@ -302,35 +321,38 @@ public class CustomJ48 extends Classifier
 	 */
 	private void subTreeRaising(Tree grandparent, Tree parent, Tree child, Instances data)
 	{
-		Tree[] childList = grandparent.getChildren();
-		boolean found = true;
-		int idx = 0;
-		for (int i=0; i<childList.length && !found; i++)
+		if (grandparent!=null && parent!=null && child!=null) 
 		{
-			if (childList[i].equals(parent))
+			Tree[] childList = grandparent.getChildren();
+			boolean found = false;
+			int idx = 0;
+			for (int i=0; i<childList.length && !found; i++)
 			{
-				found = true;
-				idx = i;
+				if (childList[i].getAttribute()==parent.getAttribute())
+				{
+					found = true;
+					idx = i;
+				}
 			}
-		}
-		double accuracy1 = this.accuracyPerformance(decisionTree, data);
-		//change parent node using child node
-		grandparent.addChild(idx, child);
-		//test performance, if worse then back to before
-		double accuracy2 = this.accuracyPerformance(decisionTree, data);
-		if (accuracy1>accuracy2) //revert if the performance worse
-		{
-			grandparent.addChild(idx, parent);
+			
+			double accuracy1 = this.accuracyPerformance(data);
+			//change parent node using child node
+			grandparent.addChild(idx, child);
+			//test performance, if worse then back to before
+			double accuracy2 = this.accuracyPerformance(data);
+			if (accuracy1>=accuracy2) //revert if the performance worse
+			{
+				grandparent.addChild(idx, parent);
+			}
 		}
 	}
 	
 	/**
 	 * Measure accuracy performance
-	 * @param decisionTree
 	 * @param data datatest for accuracy measurement
 	 * @return
 	 */
-	private double accuracyPerformance(Tree decisionTree, Instances data)
+	private double accuracyPerformance(Instances data)
 	{
 		double count = 0.0;
 		for (int i=0; i<(int)data.numInstances(); i++)
@@ -620,21 +642,23 @@ public class CustomJ48 extends Classifier
 	 */
 	public static void main(String[] args) throws Exception
 	{
-		String dataset = "example/iris.arff";
+		String dataset = "example/weather.nominal.arff";
 		CustomJ48 j48 = new CustomJ48();
 		Instances data = CustomJ48.loadDatasetArff(dataset);
 		
 		data.setClass(data.attribute(data.numAttributes() - 1));
 
+		System.out.println("Custom made J48");
 		j48.buildClassifier(data);
 		System.out.println(j48);
-		Instances instances = j48.splitNumericSuppliedTest(data);
-		System.out.println(instances);
-		System.out.println(data.classAttribute().value((int) j48.classifyInstance(instances.firstInstance())));
 		
 		
 		J48 tree = new J48();
 		tree.buildClassifier(data);
+		Evaluation eval = new Evaluation(data);
+		eval.evaluateModel(tree, data);
+		System.out.println("Weka's J48");
 		System.out.println(tree);
+		System.out.println(eval.toSummaryString());
 	}
 }

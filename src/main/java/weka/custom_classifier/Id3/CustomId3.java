@@ -307,7 +307,7 @@ public class CustomId3 extends Classifier
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception{
-		String dataset = "example/weather.nominal.arff";
+		String dataset = "example/iris.arff";
 		CustomId3 id3 = new CustomId3();
 		Instances data = CustomId3.loadDatasetArff(dataset);
 		
@@ -316,12 +316,13 @@ public class CustomId3 extends Classifier
 		id3.buildClassifier(data);
 		
 		Instance instance = data.firstInstance();
-		System.out.println(instance);
-		System.out.println(data.classAttribute().value((int) id3.classifyInstance(instance)));
+		//System.out.println(instance);
+		//System.out.println(data.classAttribute().value((int) id3.classifyInstance(instance)));
+		System.out.println("Custom made ID3");
 		System.out.println(id3);
-		
 		Id3 tree = new Id3();
 		tree.buildClassifier(data);
+		System.out.println("Weka's ID3");
 		System.out.println(tree);	
 	}
 }
