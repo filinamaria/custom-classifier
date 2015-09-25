@@ -203,17 +203,18 @@ public class CustomJ48 extends Classifier
                             valMin = data.instance(j).value(i);
                         }
                     }
-                    double thresholdGap = Math.floor((valMax-valMin)/(this.numberOfMultiSplit-2));
+                    double thresholdGap = ((valMax-valMin)/(this.numberOfMultiSplit-2));
                     ArrayList<Double> infoAttrSplit = new ArrayList();
                     String nominalLabels = "";
                     for (int x=0; x<numberOfMultiSplit-1; x++)
                     {
-                        infoAttrSplit.add(Math.floor(valMin)+(thresholdGap*x));
+                        infoAttrSplit.add((valMin)+(thresholdGap*x));
                         if (x>0)
                             nominalLabels += ", ";
-                        nominalLabels += "lessThan"+Double.toString(infoAttrSplit.get(x));
+                        nominalLabels += "lessEqualThan"+Double.toString(infoAttrSplit.get(x));
                     }
-                    nominalLabels += "moreThan"+Double.toString(infoAttrSplit.get(numberOfMultiSplit-2));
+                    nominalLabels += ", ";
+                    nominalLabels += "moreThan"+Double.toString(infoAttrSplit.get(infoAttrSplit.size()-1));
                     infoMultiSplit.add(infoAttrSplit);
 
                     //modify training data to fit the rule
@@ -229,7 +230,7 @@ public class CustomJ48 extends Classifier
                         if (!data.instance(j).isMissing(i))
                         {		
                             boolean found = false;
-                            for (int x=0; i<infoAttrSplit.size(); x++)
+                            for (int x=0; x<infoAttrSplit.size() && !found; x++)
                             {
                                 if (Double.compare(data.instance(j).value(i),infoAttrSplit.get(x)) <= 0)
                                 {
@@ -402,7 +403,7 @@ public class CustomJ48 extends Classifier
                     for (int j=0; j<data.numInstances(); j++)
                     {
                         boolean found = false;
-                        for (int x=0; i<infoMultiSplit.get(count).size(); x++)
+                        for (int x=0; x<infoMultiSplit.get(count).size() && !found; x++)
                         {
                             if (Double.compare(data.instance(j).value(i),infoMultiSplit.get(count).get(x)) <= 0)
                             {
@@ -826,7 +827,7 @@ public class CustomJ48 extends Classifier
             data.setClass(data.attribute(data.numAttributes() - 1));
 
             System.out.println("Custom made J48");
-            j48.setOption(0, 5);
+            //j48.setOption(0, 3);
             j48.buildClassifier(data);
             System.out.println(j48);
 
