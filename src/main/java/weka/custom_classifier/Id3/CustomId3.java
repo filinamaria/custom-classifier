@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.Enumeration;
 
 import com.google.common.math.DoubleMath;
+import java.util.ArrayList;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.trees.Id3;
@@ -56,7 +57,8 @@ public class CustomId3 extends Classifier
 		classifierCapabilities().testWithFail(data);
 		
 		data.deleteWithMissingClass();
-		generateTree(data, decisionTree);
+                ArrayList<Attribute> selectedAttr = new ArrayList();
+		generateTree(data, decisionTree, selectedAttr);
 	}
 	
 	/**
@@ -86,8 +88,9 @@ public class CustomId3 extends Classifier
 	 * Generate ID3 (recursive tree)
 	 * @param data training data
 	 * @param tree node
+         * @param selectedAttr already selected attribute at parents node
 	 */
-	public void generateTree(Instances data, Tree tree)
+	public void generateTree(Instances data, Tree tree, ArrayList<Attribute> selectedAttr)
 	{
 		//handle instances with missing values
 		if(data.numInstances() == 0)
@@ -103,12 +106,15 @@ public class CustomId3 extends Classifier
 		//information gain calculation
 		while(attributes.hasMoreElements()){
 			Attribute attribute = (Attribute) attributes.nextElement();
-			infoGains[attribute.index()] = informationGain(data, attribute);
-			System.out.println(infoGains[attribute.index()]);
+                        if (!selectedAttr.contains(attribute)) {
+                            infoGains[attribute.index()] = informationGain(data, attribute);
+                            System.out.println(infoGains[attribute.index()]);
+                        }
+                        else infoGains[attribute.index()]=0.0;
 		}
 		
 		Attribute highestIGAtt = data.attribute(maxIndex(infoGains));
-		
+		selectedAttr.add(highestIGAtt);
 		//build decision tree
 		tree.setAttribute(highestIGAtt);
 		
@@ -137,7 +143,7 @@ public class CustomId3 extends Classifier
 			{
 				children[i] = new Tree();
 				tree.addChildren(children);
-				generateTree(splittedData[i], children[i]);
+				generateTree(splittedData[i], children[i], selectedAttr);
 			}
 		}
 	}
@@ -307,7 +313,7 @@ public class CustomId3 extends Classifier
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception{
-		String dataset = "example/iris.arff";
+		String dataset = "example/weather.nominal.arff";
 		CustomId3 id3 = new CustomId3();
 		Instances data = CustomId3.loadDatasetArff(dataset);
 		

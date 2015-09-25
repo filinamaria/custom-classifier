@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 
 import com.google.common.math.DoubleMath;
+import java.util.Scanner;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.Evaluation;
@@ -99,7 +100,8 @@ public class CustomJ48 extends Classifier
                 data = new Instances(multiSplitNumericAttribute(data));
             generateAttributesValueDistribution(data);
             data = new Instances(replaceMissingAttribute(data)); //handles attributes that has missing value
-            generateTree(data, decisionTree);
+            ArrayList<Attribute> selectedAttr = new ArrayList();
+            generateTree(data, decisionTree, selectedAttr);
 
             //post-prune
             pruneTree(null, null, decisionTree, data);
@@ -211,10 +213,10 @@ public class CustomJ48 extends Classifier
                         infoAttrSplit.add((valMin)+(thresholdGap*x));
                         if (x>0)
                             nominalLabels += ", ";
-                        nominalLabels += "lessEqualThan"+Double.toString(infoAttrSplit.get(x));
+                        nominalLabels += "<="+Double.toString(infoAttrSplit.get(x));
                     }
                     nominalLabels += ", ";
-                    nominalLabels += "moreThan"+Double.toString(infoAttrSplit.get(infoAttrSplit.size()-1));
+                    nominalLabels += ">"+Double.toString(infoAttrSplit.get(infoAttrSplit.size()-1));
                     infoMultiSplit.add(infoAttrSplit);
 
                     //modify training data to fit the rule
@@ -391,9 +393,9 @@ public class CustomJ48 extends Classifier
                     String nominalLabels = "";
                     for (int x=0; x<=infoMultiSplit.get(count).size(); x++)
                     {
-                         nominalLabels += "lessThan"+Double.toString(infoMultiSplit.get(count).get(x));
+                         nominalLabels += "<="+Double.toString(infoMultiSplit.get(count).get(x));
                     }
-                    nominalLabels += "moreThan"+Double.toString(infoMultiSplit.get(count).get(infoMultiSplit.get(count).size()-1));
+                    nominalLabels += ">"+Double.toString(infoMultiSplit.get(count).get(infoMultiSplit.get(count).size()-1));
                     
                     filter.setNominalLabels(nominalLabels);
                     filter.setAttributeName(data.attribute(i).name());
@@ -570,8 +572,9 @@ public class CustomJ48 extends Classifier
 	 * Build J48 tree
 	 * @param data training data, no missing value
 	 * @param tree
+         * @param selectedAttr already selected attribute at parents of the node
 	 */
-	public void generateTree(Instances data, Tree tree)
+	public void generateTree(Instances data, Tree tree, ArrayList<Attribute> selectedAttr)
 	{
             Enumeration attributes = data.enumerateAttributes();
             double[] gainRatio = new double[data.numAttributes()];
@@ -580,17 +583,26 @@ public class CustomJ48 extends Classifier
             while(attributes.hasMoreElements())
             {
                 Attribute attribute = (Attribute) attributes.nextElement();
-                double infoGain = informationGain(data, attribute);
-                double splitInfo = splitInfo(data);
-                if (Double.compare(splitInfo, 0.0)!=0) {
-                    gainRatio[attribute.index()] = (infoGain / splitInfo);
+                if (!selectedAttr.contains(attribute)) {
+                    //System.out.printf(attribute.name()+" ");
+                    double infoGain = informationGain(data, attribute);
+                    double splitInfo = splitInfo(data);
+                    if (Double.compare(splitInfo, 0.0)!=0) {
+                        gainRatio[attribute.index()] = (infoGain / splitInfo);
+                    }
+                    else
+                        gainRatio[attribute.index()] =infoGain;
                 }
                 else
-                    gainRatio[attribute.index()] =infoGain;
+                    gainRatio[attribute.index()] = 0.0;
             }
-
+            
             Attribute highestIGAtt = data.attribute(maxIndex(gainRatio));
-
+            selectedAttr.add(highestIGAtt);
+            //System.out.println("|Selects "+highestIGAtt.name());
+            //Scanner in = new Scanner(System.in);
+            //in.nextInt();
+            
             //build decision tree
             tree.setAttribute(highestIGAtt);
 
@@ -612,13 +624,14 @@ public class CustomJ48 extends Classifier
             else //not at leaf, build the children
             {
                 Instances[] splittedData = split(data, highestIGAtt);
+                //System.out.println(splittedData[0].toString());
                 Tree[] children = new Tree[tree.getAttribute().numValues()];
 
                 for(int i = 0; i < children.length; i++)
                 {
                     children[i] = new Tree();
                     tree.addChildren(children);
-                    generateTree(splittedData[i], children[i]);
+                    generateTree(splittedData[i], children[i], selectedAttr);
                 }
             }
 	}
@@ -637,7 +650,7 @@ public class CustomJ48 extends Classifier
             {
                 splittedData[i] = new Instances(data, data.numInstances());
                 splittedData[i].delete();
-          }
+            }
 
             for(int i = 0; i < data.numInstances(); i++)
             {			
@@ -674,7 +687,7 @@ public class CustomJ48 extends Classifier
 	{
             double informationGain = entropy(data);
             int numOfLabels = att.numValues();
-
+            
             Instances[] instancesDistribution = new Instances[numOfLabels];
 
             for(int i = 0; i < instancesDistribution.length; i++)
@@ -682,18 +695,18 @@ public class CustomJ48 extends Classifier
                 instancesDistribution[i] = new Instances(data, data.numInstances());
                 instancesDistribution[i].delete();
             }
-
+            //System.out.println("cibai1");
             for(int i = 0; i < data.numInstances(); i++) 
             {
                 instancesDistribution[(int) data.instance(i).value(att)].add(data.instance(i));
             }
-
+            //System.out.println("cibai2");
             for(int i = 0; i < numOfLabels; i++)
             {
                 double numInstancesOfLabel = (double) instancesDistribution[i].numInstances();
                 informationGain -=  numInstancesOfLabel / (double) data.numInstances() * entropy(instancesDistribution[i]);
             }
-
+            //System.out.println("cibai3");
             return informationGain;
 	}
 	
@@ -827,7 +840,7 @@ public class CustomJ48 extends Classifier
             data.setClass(data.attribute(data.numAttributes() - 1));
 
             System.out.println("Custom made J48");
-            //j48.setOption(0, 3);
+            j48.setOption(0, 5);
             j48.buildClassifier(data);
             System.out.println(j48);
 
