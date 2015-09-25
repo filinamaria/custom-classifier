@@ -826,6 +826,7 @@ public class CustomJ48 extends Classifier
             data.setClass(data.attribute(data.numAttributes() - 1));
 
             System.out.println("Custom made J48");
+            j48.setOption(0, 5);
             j48.buildClassifier(data);
             System.out.println(j48);
 
