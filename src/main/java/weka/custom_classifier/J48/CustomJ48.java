@@ -98,8 +98,9 @@ public class CustomJ48 extends Classifier
             data = new Instances(binarySplitNumericAttribute(data)); //handle numeric attributes using binary split
         else //multisplit
             data = new Instances(multiSplitNumericAttribute(data));
-        generateAttributesValueDistribution(data);
-        data = new Instances(replaceMissingAttribute(data)); //handles attributes that has missing value
+        //generateAttributesValueDistribution(data);
+        //data = new Instances(replaceMissingAttribute(data)); //handles attributes that has missing value
+          
         ArrayList<Attribute> selectedAttr = new ArrayList();
         generateTree(data, data, decisionTree, selectedAttr);
 
@@ -109,7 +110,7 @@ public class CustomJ48 extends Classifier
         //accuracy
         System.out.println("Model accuracy = "+accuracyPerformance(data));
 	}
-	
+		
 	/**
 	 * Split attributes that has numeric value using binary split
 	 * @param data training data
@@ -458,7 +459,7 @@ public class CustomJ48 extends Classifier
                     pruneTree(parent, child, childList[i], data);
                 }
 
-                if (grandparent!=null && parent!=null) //try subtree raising
+                if (grandparent!=null && parent!=null && child!=null) //try subtree raising
                 {
                     subTreeRaising(grandparent, parent, child, data);
                 }
@@ -568,6 +569,20 @@ public class CustomJ48 extends Classifier
         return retVal;
     }
 	
+	private double calculateNonMissingValueDistribution(Instances data, Attribute att){
+		double count = 0.0;
+		Enumeration instances = data.enumerateInstances();
+		
+		while(instances.hasMoreElements()){
+			Instance inst = (Instance) instances.nextElement();
+			if(inst.value(att) != Instance.missingValue()){
+				count++;
+			}
+		}
+
+		return count;		
+	}
+    
 	/**
 	 * Build J48 tree
 	 * @param data training data, no missing value
@@ -576,13 +591,6 @@ public class CustomJ48 extends Classifier
 	 */
 	public void generateTree(Instances data, Instances parentData, Tree tree, ArrayList<Attribute> selectedAttr)
 	{
-		// handle empty leaves
-		if(data.numInstances() == 0){
-			tree.setAttribute(null);
-			tree.setClassValue(dominantClasses(parentData));
-			tree.setAttribute(data.classAttribute());
-		}
-		
         Enumeration attributes = data.enumerateAttributes();
         double[] gainRatio = new double[data.numAttributes()];
 
@@ -591,23 +599,29 @@ public class CustomJ48 extends Classifier
         {
             Attribute attribute = (Attribute) attributes.nextElement();
             if (!selectedAttr.contains(attribute)) {
-                //System.out.printf(attribute.name()+" ");
+            
                 double infoGain = informationGain(data, attribute);
                 double splitInfo = splitInfo(data);
-                if (Double.compare(splitInfo, 0.0)!=0) {
-                    gainRatio[attribute.index()] = (infoGain / splitInfo);
+                if (Double.compare(splitInfo, 0.0)!=0 && !Double.isNaN(infoGain)) {
+                	double numNonMissingValue = calculateNonMissingValueDistribution(data, attribute);
+                	double numInstances = data.numInstances();
+                	double timesFactor = numNonMissingValue / numInstances;
+                	
+                	if (Double.compare(numNonMissingValue,0.0) == 0 || Double.compare(numInstances,0.0) == 0) {
+                		timesFactor = 0.0;
+                	}
+                    gainRatio[attribute.index()] = timesFactor * (infoGain / splitInfo);
                 }
-                else
+                else if (!Double.isNaN(infoGain))
                     gainRatio[attribute.index()] =infoGain;
+                else
+                	gainRatio[attribute.index()] = 0.0;
             }
             else
                 gainRatio[attribute.index()] = 0.0;
         }
         
         Attribute highestIGAtt = data.attribute(maxIndex(gainRatio));
-        //System.out.println("|Selects "+highestIGAtt.name());
-        //Scanner in = new Scanner(System.in);
-        //in.nextInt();
         
         //build decision tree
         tree.setAttribute(highestIGAtt);
@@ -719,18 +733,19 @@ public class CustomJ48 extends Classifier
             instancesDistribution[i] = new Instances(data, data.numInstances());
             instancesDistribution[i].delete();
         }
-        //System.out.println("cibai1");
+ 
         for(int i = 0; i < data.numInstances(); i++) 
         {
-            instancesDistribution[(int) data.instance(i).value(att)].add(data.instance(i));
+        	if (!data.instance(i).isMissing(att))
+        		instancesDistribution[(int) data.instance(i).value(att)].add(data.instance(i));
         }
-        //System.out.println("cibai2");
+        
         for(int i = 0; i < numOfLabels; i++)
         {
             double numInstancesOfLabel = (double) instancesDistribution[i].numInstances();
             informationGain -=  numInstancesOfLabel / (double) data.numInstances() * entropy(instancesDistribution[i]);
         }
-        //System.out.println("cibai3");
+        
         return informationGain;
 	}
 	
@@ -855,7 +870,7 @@ public class CustomJ48 extends Classifier
 	 */
 	public static void main(String[] args) throws Exception
 	{
-        String dataset = "example/weather.numeric.arff";
+        String dataset = "example/iris.arff";
         CustomJ48 j48 = new CustomJ48();
         Instances data = CustomJ48.loadDatasetArff(dataset);
 
