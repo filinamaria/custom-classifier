@@ -92,9 +92,8 @@ public class CustomId3 extends Classifier
 	 */
 	public void generateTree(Instances data, Tree tree, ArrayList<Attribute> selectedAttr)
 	{
-		//handle instances with missing values
-		if(data.numInstances() == 0)
-		{
+		//handle empty leaves
+		if(data.numInstances() == 0){
 			tree.setAttribute(null);
 			tree.setClassValue(Instance.missingValue());
 			return;
@@ -119,29 +118,24 @@ public class CustomId3 extends Classifier
 		tree.setAttribute(highestIGAtt);
 		
 		//leaf detection
-		if(isClassified(data)) //leaf
-		{
+		if(isClassified(data)){ // leaf
 			tree.setAttribute(null);
 			double[] distribution = new double[data.numClasses()];
 			Enumeration instances = data.enumerateInstances();
 			
-			while(instances.hasMoreElements())
-			{
+			while(instances.hasMoreElements()){
 				Instance instance = (Instance) instances.nextElement();
 				distribution[(int) instance.classValue()]++;
 			}
 			
 			tree.setClassValue(maxIndex(distribution));
 			tree.setClassAttribute(data.classAttribute());
-		}
-		else //not leaf yet, generate child
-		{ 
+		}else{ //not at leaf yet, generate child
 			selectedAttr.add(highestIGAtt);
 			Instances[] splittedData = split(data, highestIGAtt);
 			Tree[] children = new Tree[tree.getAttribute().numValues()];
 			
-			for(int i = 0; i < children.length; i++)
-			{
+			for(int i = 0; i < children.length; i++){
 				children[i] = new Tree();
 				tree.addChildren(children);
 				generateTree(splittedData[i], children[i], selectedAttr);
