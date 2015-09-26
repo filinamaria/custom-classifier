@@ -535,11 +535,16 @@ public class CustomJ48 extends Classifier
 	 */
 	private double classifyInstance(Instance instance, Tree tree)
 	{
-        instance = replaceMissingAttribute(instance);
+        //instance = replaceMissingAttribute(instance);
         if(tree.getAttribute() == null){
             return tree.getClassValue();
         }else{
-            return classifyInstance(instance, tree.getChild((int) instance.value(tree.getAttribute())));
+            if (instance.isMissing(tree.getAttribute())) 
+            {
+                return classifyInstance(instance, tree.getChild(this.maxIndex(tree.getProbs())));
+            }
+            else
+                return classifyInstance(instance, tree.getChild((int) instance.value(tree.getAttribute())));
         }
 	}
         
@@ -643,10 +648,17 @@ public class CustomJ48 extends Classifier
         }
         else //not at leaf, build the children
         {
-        	selectedAttr.add(highestIGAtt);
+            selectedAttr.add(highestIGAtt);
             Instances[] splittedData = split(data, highestIGAtt);
-            //System.out.println(splittedData[0].toString());
+       
             Tree[] children = new Tree[tree.getAttribute().numValues()];
+            double[] probs = new double[tree.getAttribute().numValues()];
+            
+            for (int i=0; i<probs.length; i++)
+            {
+                probs[i] = (double) splittedData[i].numInstances() / (double) data.numInstances();
+            }
+            tree.addProbs(probs);
 
             for(int i = 0; i < children.length; i++)
             {
@@ -870,7 +882,7 @@ public class CustomJ48 extends Classifier
 	 */
 	public static void main(String[] args) throws Exception
 	{
-        String dataset = "example/iris.arff";
+        String dataset = "example/weather.numeric.arff";
         CustomJ48 j48 = new CustomJ48();
         Instances data = CustomJ48.loadDatasetArff(dataset);
 

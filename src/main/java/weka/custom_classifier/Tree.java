@@ -10,7 +10,8 @@ public class Tree {
 	private Attribute attribute;
 	private double classValue;
 	private Attribute classAttribute;
-	
+	private double[] probs; //probability distribution of each attribute value -> for J48
+        
 	public Tree(){}
 	
 	public void setAttribute(Attribute att){
@@ -52,4 +53,20 @@ public class Tree {
 	public void addChildren(Tree[] children){
 		this.children = children;
 	}
+        
+        public void addProbs(double[] prop) {
+            this.probs = prop;
+        }
+        
+        public void addProb(int index, double prop) {
+            this.probs[index] = prop;
+        }
+        
+        public double getProb(int index) {
+            return probs[index];
+        }
+        
+        public double[] getProbs() {
+            return probs;
+        }
 }
