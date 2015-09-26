@@ -98,8 +98,6 @@ public class CustomJ48 extends Classifier
             data = new Instances(binarySplitNumericAttribute(data)); //handle numeric attributes using binary split
         else //multisplit
             data = new Instances(multiSplitNumericAttribute(data));
-        //generateAttributesValueDistribution(data);
-        //data = new Instances(replaceMissingAttribute(data)); //handles attributes that has missing value
           
         ArrayList<Attribute> selectedAttr = new ArrayList();
         generateTree(data, data, decisionTree, selectedAttr);
@@ -254,7 +252,7 @@ public class CustomJ48 extends Classifier
 	}
 	
 	/**
-	 * Generate attributes value distribution over class
+	 * Generate most common attribute values distribution over class
 	 * @param data training data
 	 */
 	public void generateAttributesValueDistribution(Instances data)
@@ -317,7 +315,7 @@ public class CustomJ48 extends Classifier
 	}
 	
 	/**
-	 * Replace instances with missing value
+	 * Replace attribute of instance with missing value, using most common attribute
 	 * @param data Instances
 	 * @return Instances with missing value replaced
 	 */
@@ -634,16 +632,22 @@ public class CustomJ48 extends Classifier
         if(Double.compare(gainRatio[highestIGAtt.index()], 0.0) == 0) //at leaf
         {
             tree.setAttribute(null);
-            double[] distribution = new double[data.numClasses()];
-            Enumeration instances = data.enumerateInstances();
+            if (data.numInstances()!=0) {              
+                double[] distribution = new double[data.numClasses()];
+                Enumeration instances = data.enumerateInstances();
 
-            while(instances.hasMoreElements())
-            {
-                Instance instance = (Instance) instances.nextElement();
-                distribution[(int) instance.classValue()]++;
+                while(instances.hasMoreElements())
+                {
+                    Instance instance = (Instance) instances.nextElement();
+                    distribution[(int) instance.classValue()]++;
+                }
+
+                tree.setClassValue(maxIndex(distribution));
             }
-
-            tree.setClassValue(maxIndex(distribution));
+            else //penanganan example kosong
+            {
+                tree.setClassValue(dominantClasses(parentData));
+            }
             tree.setClassAttribute(data.classAttribute());
         }
         else //not at leaf, build the children
@@ -882,14 +886,14 @@ public class CustomJ48 extends Classifier
 	 */
 	public static void main(String[] args) throws Exception
 	{
-        String dataset = "example/weather.numeric.arff";
+        String dataset = "example/iris.arff";
         CustomJ48 j48 = new CustomJ48();
         Instances data = CustomJ48.loadDatasetArff(dataset);
 
         data.setClass(data.attribute(data.numAttributes() - 1));
 
         System.out.println("Custom made J48");
-        j48.setOption(0, 5);
+        j48.setOption(0, 10);
         j48.buildClassifier(data);
         System.out.println(j48);
 
