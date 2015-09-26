@@ -101,7 +101,7 @@ public class CustomJ48 extends Classifier
         generateAttributesValueDistribution(data);
         data = new Instances(replaceMissingAttribute(data)); //handles attributes that has missing value
         ArrayList<Attribute> selectedAttr = new ArrayList();
-        generateTree(data, decisionTree, selectedAttr);
+        generateTree(data, data, decisionTree, selectedAttr);
 
         //post-prune
         pruneTree(null, null, decisionTree, data);
@@ -574,11 +574,13 @@ public class CustomJ48 extends Classifier
 	 * @param tree
          * @param selectedAttr already selected attribute at parents of the node
 	 */
-	public void generateTree(Instances data, Tree tree, ArrayList<Attribute> selectedAttr)
+	public void generateTree(Instances data, Instances parentData, Tree tree, ArrayList<Attribute> selectedAttr)
 	{
 		// handle empty leaves
 		if(data.numInstances() == 0){
-			
+			tree.setAttribute(null);
+			tree.setClassValue(dominantClasses(parentData));
+			tree.setAttribute(data.classAttribute());
 		}
 		
         Enumeration attributes = data.enumerateAttributes();
@@ -636,9 +638,26 @@ public class CustomJ48 extends Classifier
             {
                 children[i] = new Tree();
                 tree.addChildren(children);
-                generateTree(splittedData[i], children[i], selectedAttr);
+                generateTree(splittedData[i], data, children[i], selectedAttr);
             }
         }
+	}
+	
+	/**
+	 * return class value of dominant classes of training data
+	 * @param data training data
+	 * @return class value
+	 */
+	public double dominantClasses(Instances data){
+		Enumeration instances = data.enumerateInstances();
+		double[] classValueCount = new double[data.classAttribute().numValues()];
+		
+		while (instances.hasMoreElements()) {
+			Instance inst = (Instance) instances.nextElement();
+			classValueCount[(int) inst.classValue()]++;
+		}
+		
+		return (double) maxIndex(classValueCount);
 	}
 	
 	/**
