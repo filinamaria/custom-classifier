@@ -2,19 +2,19 @@ package weka.custom_classifier.Id3;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Enumeration;
 
 import com.google.common.math.DoubleMath;
-import java.util.ArrayList;
 
 import weka.classifiers.Classifier;
 import weka.classifiers.trees.Id3;
 import weka.core.Attribute;
 import weka.core.Capabilities;
 import weka.core.Capabilities.Capability;
-import weka.core.converters.ArffLoader;
 import weka.core.Instance;
 import weka.core.Instances;
+import weka.core.converters.ArffLoader;
 import weka.custom_classifier.Tree;
 
 public class CustomId3 extends Classifier
@@ -57,7 +57,7 @@ public class CustomId3 extends Classifier
 		classifierCapabilities().testWithFail(data);
 		
 		data.deleteWithMissingClass();
-                ArrayList<Attribute> selectedAttr = new ArrayList();
+        ArrayList<Attribute> selectedAttr = new ArrayList();
 		generateTree(data, decisionTree, selectedAttr);
 	}
 	
@@ -106,20 +106,20 @@ public class CustomId3 extends Classifier
 		//information gain calculation
 		while(attributes.hasMoreElements()){
 			Attribute attribute = (Attribute) attributes.nextElement();
-                        if (!selectedAttr.contains(attribute)) {
-                            infoGains[attribute.index()] = informationGain(data, attribute);
-                            System.out.println(infoGains[attribute.index()]);
-                        }
-                        else infoGains[attribute.index()]=0.0;
+            if (!selectedAttr.contains(attribute)) {
+                infoGains[attribute.index()] = informationGain(data, attribute);
+                System.out.println(infoGains[attribute.index()]);
+            }else 
+            	infoGains[attribute.index()]=0.0;
 		}
 		
 		Attribute highestIGAtt = data.attribute(maxIndex(infoGains));
-		selectedAttr.add(highestIGAtt);
+		
 		//build decision tree
 		tree.setAttribute(highestIGAtt);
 		
 		//leaf detection
-		if(Double.compare(infoGains[highestIGAtt.index()], 0.0) == 0) //leaf
+		if(isClassified(data)) //leaf
 		{
 			tree.setAttribute(null);
 			double[] distribution = new double[data.numClasses()];
@@ -136,6 +136,7 @@ public class CustomId3 extends Classifier
 		}
 		else //not leaf yet, generate child
 		{ 
+			selectedAttr.add(highestIGAtt);
 			Instances[] splittedData = split(data, highestIGAtt);
 			Tree[] children = new Tree[tree.getAttribute().numValues()];
 			
@@ -146,6 +147,29 @@ public class CustomId3 extends Classifier
 				generateTree(splittedData[i], children[i], selectedAttr);
 			}
 		}
+	}
+	
+	/**
+	 * Check if all instances are classified into a single class
+	 * @param data training data
+	 * @return boolean
+	 */
+	private boolean isClassified(Instances data){
+		boolean classified = true;
+		Enumeration instances = data.enumerateInstances();
+		Instance comparator = (Instance) instances.nextElement();
+		
+		while(instances.hasMoreElements() && classified){
+			Instance temp = (Instance)	instances.nextElement();
+			
+			if(comparator.classValue() != temp.classValue()){
+				classified = false;
+			}
+			
+			comparator = temp;
+		}
+		
+		return classified;
 	}
 	
 	/**
@@ -313,7 +337,7 @@ public class CustomId3 extends Classifier
 	 * @throws Exception
 	 */
 	public static void main(String[] args) throws Exception{
-		String dataset = "example/weather.nominal.arff";
+		String dataset = "example/activity.nominal.arff";
 		CustomId3 id3 = new CustomId3();
 		Instances data = CustomId3.loadDatasetArff(dataset);
 		
@@ -322,8 +346,7 @@ public class CustomId3 extends Classifier
 		id3.buildClassifier(data);
 		
 		Instance instance = data.firstInstance();
-		//System.out.println(instance);
-		//System.out.println(data.classAttribute().value((int) id3.classifyInstance(instance)));
+		
 		System.out.println("Custom made ID3");
 		System.out.println(id3);
 		Id3 tree = new Id3();
