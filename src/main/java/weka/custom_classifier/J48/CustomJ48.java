@@ -886,7 +886,7 @@ public class CustomJ48 extends Classifier
 	 */
 	public static void main(String[] args) throws Exception
 	{
-        String dataset = "example/iris.arff";
+        String dataset = "example/cpu.arff";
         CustomJ48 j48 = new CustomJ48();
         Instances data = CustomJ48.loadDatasetArff(dataset);
 
